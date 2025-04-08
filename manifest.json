@@ -1,13 +1,17 @@
 {
-  "name": "Image Embedder",
-  "version": "1.1",
-  "author": "Virgo",
-  "description": "Embed images from folder using [filename] syntax",
-  "license": "AGPL-3.0",
-  "main": "index.js",
-  "homepage": "https://github.com/SirVirgo/ST_ImageEmbedder",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/SirVirgo/ST_ImageEmbedder.git"
-
+    "name": "Image Embedder",
+    "version": "1.1",
+    "author": "Virgo",
+    "description": "Embed images from folder using [filename] syntax",
+    "license": "AGPL-3.0",
+    "main": "index.js",
+    "homepage": "https://github.com/SirVirgo/ST_ImageEmbedder",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/SirVirgo/ST_ImageEmbedder.git"
+    },
+    "ui": {
+        "settings": true,
+        "menu": true
+    }
 }
