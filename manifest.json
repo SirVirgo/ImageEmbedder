@@ -1,0 +1,12 @@
+{
+  "name": "Image Embedder",
+  "version": "1.0",
+  "author": "Virgo",
+  "description": "Замена [image.jpg] на превью изображений",
+  "license": "AGPL-3.0",
+  "main": "index.js",
+  "dependencies": {
+    "exifreader": "^4.0.0",
+    "image-size": "^1.0.2"
+  }
+}

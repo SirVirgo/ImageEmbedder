@@ -1,0 +1,4 @@
+{
+  "imageFolder": "/absolute/path/to/selected/folder",
+  "maxSize": "auto"
+}
