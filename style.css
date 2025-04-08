@@ -1,0 +1,22 @@
+.embedded-image {
+    margin: 10px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: transform 0.2s;
+}
+
+.embedded-image:hover {
+    transform: scale(1.02);
+    cursor: zoom-in;
+}
+
+.image-embedder-settings .text_pole {
+    padding: 8px;
+    font-size: 14px;
+}
+
+.imageEmbedderStatus {
+    padding: 8px;
+    background: var(--input-background);
+    border-radius: 4px;
+    margin-top: 5px;
+}
