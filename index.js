@@ -1,163 +1,139 @@
-const { hooks, events, ui, settingsManager } = require('sillytavern-api');
-const fs = require('fs');
-const path = require('path');
-const mime = require('mime-types');
-const { ipcRenderer } = require('electron');
-const EXTENSION_ID = "image-embedder-v2";
+import { getContext, substituteParams } from '../../../../script.js';
+import { extension_settings, saveSettingsDebounced } from '../../../extensions.js';
+import { getFileText, debounce } from '../../../utils.js';
 
-// Конфигурация
-let config = {
-    imageFolder: path.join(__dirname, 'image_cache'),
-    allowedTypes: new Set(['image/png', 'image/jpeg', 'image/webp', 'image/avif']),
-    maxSize: '800px'
+const { eventSource, event_types, callPopup, renderExtensionTemplateAsync } = getContext();
+
+const defaultSettings = {
+    enabled: true,
+    folder: '',
+    maxWidth: '600px',
+    allowedTypes: ['image/png', 'image/jpeg', 'image/webp'],
+    cache: {},
+    lastScan: 0
 };
 
-// Инициализация
-let imageMap = new Map();
+const path = 'extensions/ImageEmbedder';
+let imageCache = new Map();
 
-function loadConfig() {
-    const saved = settingsManager.getExtensionConfig('ImageEmbedder');
-    if (saved) {
-        config = { ...config, ...saved };
-    }
-
-    // Создаем папку, если не существует
-    if (!fs.existsSync(config.imageFolder)) {
-        fs.mkdirSync(config.imageFolder, { recursive: true });
-    }
-}
-
-function scanImages() {
-    imageMap.clear();
+async function scanFolder(folder) {
     try {
-        fs.readdirSync(config.imageFolder).forEach(file => {
-            const filePath = path.join(config.imageFolder, file);
-            const stats = fs.statSync(filePath);
+        const files = await fs.promises.readdir(folder);
+        imageCache.clear();
+
+        for (const file of files) {
+            const filePath = path.join(folder, file);
+            const stats = await fs.promises.stat(filePath);
 
             if (stats.isFile()) {
                 const mimeType = mime.lookup(file);
-                if (config.allowedTypes.has(mimeType)) {
-                    imageMap.set(file.toLowerCase(), {
+                if (extension_settings.ImageEmbedder.allowedTypes.includes(mimeType)) {
+                    imageCache.set(file.toLowerCase(), {
                         path: filePath,
                         name: path.basename(file, path.extname(file)),
-                        mime: mimeType
+                        mime: mimeType,
+                        size: stats.size,
+                        lastModified: stats.mtimeMs
                     });
                 }
             }
-        });
+        }
+
+        extension_settings.ImageEmbedder.cache = Object.fromEntries(imageCache);
+        extension_settings.ImageEmbedder.lastScan = Date.now();
+        saveSettingsDebounced();
     } catch (error) {
-        ui.notificationError(`Ошибка сканирования: ${error.message}`);
+        console.error('Image Embedder scan error:', error);
     }
 }
 
-// GUI Integration
-hooks.register('settings-ui', (registerSection) => {
-  registerSection({
-    id: EXTENSION_ID,
-    name: "Image Embedder",
-    content: `
-        <div class="${EXTENSION_ID}-settings">
-            <h3>Настройки изображений</h3>
-            <div class="setting-item">
-                <label>Папка с изображениями:</label>
-                <input type="text" id="imageFolderPath" 
-                       value="${config.imageFolder}" 
-                       readonly
-                       style="width: 70%">
-                <button onclick="selectImageFolder()" 
-                        class="btn btn-primary"
-                        style="margin-left: 10px">
-                    Выбрать папку
-                </button>
-            </div>
-            <div class="setting-item">
-                <label>Макс. размер:</label>
-                <input type="text" 
-                       id="imageMaxSize" 
-                       value="${config.maxSize}"
-                       onchange="updateMaxSize(this.value)">
-            </div>
-        </div>
-    `
-}));
+function updateSettingsUI() {
+    $('#imageEmbedderFolder').val(extension_settings.ImageEmbedder.folder);
+    $('#imageEmbedderMaxWidth').val(extension_settings.ImageEmbedder.maxWidth);
+    $('#imageEmbedderEnabled').prop('checked', extension_settings.ImageEmbedder.enabled);
+}
 
-// Обработчики GUI
-window.selectImageFolder = async () => {
-    const result = await ipcRenderer.invoke('open-directory-dialog');
+async function handleFolderSelect() {
+    const result = await window.electron.showOpenDialog({
+        properties: ['openDirectory']
+    });
+
     if (!result.canceled && result.filePaths[0]) {
-        config.imageFolder = result.filePaths[0];
-        document.getElementById('imageFolderPath').value = config.imageFolder;
-        saveConfig();
-        scanImages();
+        extension_settings.ImageEmbedder.folder = result.filePaths[0];
+        await scanFolder(extension_settings.ImageEmbedder.folder);
+        updateSettingsUI();
     }
-};
-
-window.updateMaxSize = (value) => {
-    config.maxSize = value;
-    saveConfig();
-};
-
-function saveConfig() {
-    settingsManager.setExtensionConfig('ImageEmbedder', config);
 }
 
-// Обработка сообщений
-hooks.register('message-preprocess', (message) => {
-    const imageRegex = /\[([^\]]+?\.(?:png|jpe?g|webp|avif))(:\d+%?)?\]/gi;
+function replaceImageTags(text) {
+    const pattern = /\[([^\]]+?\.(?:png|jpe?g|webp))(:\d+%?)?\]/gi;
 
-    message.content = message.content.replace(imageRegex, (match, fileName, size) => {
-        const image = imageMap.get(fileName.toLowerCase());
+    return text.replace(pattern, (match, filename, size) => {
+        const image = imageCache.get(filename.toLowerCase());
         if (!image) return match;
 
-        const sizeAttr = size ? ` style="width: ${size.slice(1)}"` : 
-                             ` style="max-width: ${config.maxSize}"`;
-
-        return `<img src="${getImageData(image)}" 
-                    alt="${image.name}"
-                    ${sizeAttr}
-                    class="user-image-embed">`;
+        const width = size ? size.slice(1) : extension_settings.ImageEmbedder.maxWidth;
+        return `<img src="file://${image.path}" 
+                    alt="${image.name}" 
+                    style="max-width: ${width}; border-radius: 8px;"
+                    class="embedded-image">`;
     });
-
-    return message;
-});
-
-function getImageData(image) {
-    try {
-        if (process.env.ELECTRON) {
-            return `file://${image.path}?${Date.now()}`;
-        } else {
-            const data = fs.readFileSync(image.path);
-            return `data:${image.mime};base64,${data.toString('base64')}`;
-        }
-    } catch (error) {
-        console.error('Error loading image:', error);
-        return '[Image load failed]';
-    }
 }
 
-// Инициализация
-events.on('extension-loaded', () => {
-    loadConfig();
-    scanImages();
+eventSource.on(event_types.MESSAGE_RECEIVED, (messageId) => {
+    if (!extension_settings.ImageEmbedder.enabled) return;
 
-    fs.watch(config.imageFolder, { recursive: true }, (event) => {
-        if (event === 'rename') scanImages();
-    });
+    const message = chat[messageId];
+    message.mes = replaceImageTags(message.mes);
+    updateMessageBlock(messageId, message);
 });
 
-// Стили
-hooks.register('styles', () => `
-    .user-image-embed {
-        border-radius: 8px;
-        margin: 10px 0;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        display: block;
+eventSource.on(event_types.MESSAGE_SWIPED, (messageId) => {
+    if (!extension_settings.ImageEmbedder.enabled) return;
+
+    const message = chat[messageId];
+    message.swipes.forEach((swipe, index) => {
+        message.swipes[index] = replaceImageTags(swipe);
+    });
+    updateMessageBlock(messageId, message);
+});
+
+jQuery(async () => {
+    // Инициализация настроек
+    if (!extension_settings.ImageEmbedder) {
+        extension_settings.ImageEmbedder = { ...defaultSettings };
     }
 
-    .image-embedder-settings {
-        padding: 15px;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        margin-bottom: 20px;
+    // Загрузка кэша
+    if (Object.keys(extension_settings.ImageEmbedder.cache).length > 0) {
+        imageCache = new Map(Object.entries(extension_settings.ImageEmbedder.cache));
     }
-`);
+
+    // Регистрация UI
+    $('#extensions_settings').append(await renderExtensionTemplateAsync(path, 'settings'));
+
+    // Элементы управления
+    $('#imageEmbedderEnabled').on('change', () => {
+        extension_settings.ImageEmbedder.enabled = $(this).prop('checked');
+        saveSettingsDebounced();
+    });
+
+    $('#imageEmbedderFolderBtn').on('click', debounce(handleFolderSelect, 300));
+
+    $('#imageEmbedderMaxWidth').on('input', debounce(() => {
+        extension_settings.ImageEmbedder.maxWidth = $(this).val();
+        saveSettingsDebounced();
+    }, 500));
+
+    // Автосканирование при изменениях
+    const watcher = chokidar.watch(extension_settings.ImageEmbedder.folder, {
+        ignoreInitial: true,
+        awaitWriteFinish: true
+    });
+
+    watcher.on('add', (path) => scanFolder(extension_settings.ImageEmbedder.folder));
+    watcher.on('unlink', (path) => scanFolder(extension_settings.ImageEmbedder.folder));
+
+    updateSettingsUI();
+    console.log('🖼️ Image Embedder loaded');
+});
