@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const mime = require('mime-types');
 const { ipcRenderer } = require('electron');
+const EXTENSION_ID = "image-embedder-v2";
 
 // Конфигурация
 let config = {
@@ -50,11 +51,12 @@ function scanImages() {
 }
 
 // GUI Integration
-hooks.register('settings-ui', () => ({
-    id: 'image-embedder',
-    name: 'Image Embedder',
+hooks.register('settings-ui', (registerSection) => {
+  registerSection({
+    id: EXTENSION_ID,
+    name: "Image Embedder",
     content: `
-        <div class="image-embedder-settings">
+        <div class="${EXTENSION_ID}-settings">
             <h3>Настройки изображений</h3>
             <div class="setting-item">
                 <label>Папка с изображениями:</label>
