@@ -1,0 +1,38 @@
+<div class="image-embedder-settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>Image Embedder Settings</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+            <label class="flex-container">
+                <input type="checkbox" id="imageEmbedderEnabled" checked>
+                <span>Enable Image Embedder</span>
+            </label>
+
+            <div class="flex-container flexFlowColumn">
+                <label>Images Folder:</label>
+                <div class="flex-container flexGap5">
+                    <input type="text" id="imageEmbedderFolder" readonly class="text_pole flex1">
+                    <button id="imageEmbedderFolderBtn" class="btn btn-primary">
+                        <i class="fa fa-folder-open"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-container flexFlowColumn">
+                <label>Max Image Width:</label>
+                <input type="text" id="imageEmbedderMaxWidth" 
+                       class="text_pole" 
+                       placeholder="600px">
+            </div>
+
+            <div class="flex-container flexFlowColumn">
+                <label>Status:</label>
+                <div class="imageEmbedderStatus">
+                    <span id="imageEmbedderCount"></span> images loaded
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
