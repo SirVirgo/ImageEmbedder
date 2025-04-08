@@ -1,22 +1,33 @@
 .embedded-image {
     margin: 10px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.2s;
+    cursor: zoom-in;
+    background: var(--body-background);
+    padding: 3px;
 }
 
 .embedded-image:hover {
     transform: scale(1.02);
-    cursor: zoom-in;
-}
-
-.image-embedder-settings .text_pole {
-    padding: 8px;
-    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .imageEmbedderStatus {
-    padding: 8px;
-    background: var(--input-background);
-    border-radius: 4px;
-    margin-top: 5px;
+    padding: 8px 12px;
+    background: var(--table-header-background);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--sub-text);
+}
+
+.imageEmbedderStatus.error {
+    background-color: var(--red-15);
+    color: var(--red-text);
+}
+
+#imageEmbedderFolder {
+    background-color: var(--input-background);
+    border-color: var(--input-border-color);
+    color: var(--input-text-color);
 }
