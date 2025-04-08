@@ -1,12 +1,13 @@
 {
   "name": "Image Embedder",
-  "version": "1.0",
+  "version": "1.1",
   "author": "Virgo",
-  "description": "Замена [image.jpg] на превью изображений",
+  "description": "Embed images from folder using [filename] syntax",
   "license": "AGPL-3.0",
   "main": "index.js",
-  "dependencies": {
-    "exifreader": "^4.0.0",
-    "image-size": "^1.0.2"
+  "homepage": "https://github.com/SirVirgo/ST_ImageEmbedder",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SirVirgo/ST_ImageEmbedder.git"
   }
 }
